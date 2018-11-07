@@ -1,0 +1,212 @@
+#!/bin/bash
+
+# 2018-11-06 J.Nider
+#
+# A simple build system
+# This is based on the observation that many Makefiles actually call out to bash
+# to do the real work. That includes many tasks such as creating output directories,
+# checking for the existence of files, and many others that the Make language
+# simply doesn't allow for. This kinda defeats the purpose of having a Make language
+# since the moment a bash function is called directly, we lose portability to run
+# the Makefile on any other shell.
+# Moreover, the syntax and functionality of make are not that different from bash
+# itself, which begs the question 'why use two languages instead of one?'
+# Thus, 'bake' is the result of bash+make => a bash-based build system
+
+# allow 10 levels of function recursion by default
+FUNCNEST=${NESTING:-10}
+#set -x
+
+declare -a rules
+declare -A dep_names
+verbose=false
+
+function filter_name()
+{
+	local name=$1 # the name to be filtered
+	local _result=$2 # the return variable to be filled with the filtered name
+
+	# replace . with _
+	name=${name//\./_}
+	# replace / with _
+	name=${name//\//_}
+	# replace - with _
+	name=${name//-/_}
+	eval $_result="'$name'"
+}
+
+# extract the filename portion of a file (by removing the path)
+# could use external "basename" utility instead
+function filename()
+{
+	local name=$1
+	local _result=$2
+	eval $_result="'${name##*/}'"
+}
+
+# export a list of all rules
+# This function depends on the output (echo) to be captured by using $(_find_rules)
+# or something similar
+function _find_rules()
+{
+	local fn_raw=($(declare -F))
+	for fn_name in $(declare -F); do
+		if [[ $fn_name =~ ^rule* ]]; then
+		echo "$fn_name"
+		fi
+	done
+}
+
+#generic rule for checking the timestamp to see if the target needs to be rebuilt
+# Emulate the behaviour of make. Make targets are built recursively in 2 stages - first
+# the dependencies are built, and then the target itself is built.
+# build() takes 2 main parameters:
+# target: name of the target to build
+# dep_var_name: the name of a variable containing an array of dependencies
+function build()
+{
+	local target=$1
+	local dep_var_name=$2
+	local parent_timestamp=$3
+	local parent=$4
+	local rebuild
+	local ret
+	local modified
+	local target_exists
+
+	# set the 'modified' timestamp
+	! $verbose || echo "Checking for the existence of a target file named '$target'"
+	if [[ -e $target ]]; then
+		target_exists=true
+		rebuild=false
+		! $verbose || echo "Target $target exists"
+		if [ -d $target ]; then
+			# directory - recurse into it and build whatever is there
+			! $verbose || echo "Entering directory '$target'"
+			pushd .
+			cd $target
+			bake $target ${verbose:+"-v"}
+			popd
+		elif [ -f $target ]; then
+			# regular file
+			modified=$(stat -c %Y "$target")
+		fi
+	else
+		! $verbose || echo "target file '$target' doesn't exist"
+		modified=0
+		rebuild=true
+	fi
+
+	# Check to see if we need to rebuild the target because of changes in the dependencies
+	# find the dependency list. The user can override the dependency list name by putting the
+	# name of the list in the variable dep_names[$target] in the script. Otherwise, the
+	# dependency list will default to dep_$target.
+	# Sometimes, dep_$target isn't a valid identifier (for example, contains '/' in a file path)
+	# For that reason, the name is filtered beforehand.
+	dep_var_name=${dep_names[$target]:-$target}
+	filter_name $dep_var_name dep_var_name
+	! $verbose || echo "Checking dependencies of target $target with dependencies in variable "\$"$dep_var_name"
+	local -n dep_list=$dep_var_name
+	if [[ $dep_list ]]; then
+		! $verbose || echo "Dependencies of $target: ${dep_list[*]}"
+
+		## this can be parallelized ##
+		local dep
+		for dep in ${dep_list[*]}; do
+			if [[ $dep ]]; then
+				# filter the target name to create a valid identifier
+				filter_name $dep filtered_dep
+				build $dep dep_names[$filtered_dep] $modified $target
+				ret=$?
+				if [[ $ret == 255 ]]; then
+					echo "Dependency $dep failed"
+					return $ret
+				elif [[ $ret == 2 ]]; then
+					! $verbose || echo "Prerequisite $dep says we must rebuild $target"
+					rebuild=true
+				fi
+
+				# check the timestamp of the dependency to see if the target needs to be rebuilt
+				if [[ -e $dep && $modified != 0 ]]; then
+					dep_modified=$(stat -c %Y "$dep")
+					! $verbose || echo "Checking timestamp of $dep ($dep_modified) vs $target ($modified)"
+					if [[ $dep_modified > $modified ]]; then
+						! $verbose || echo "$target out of date"
+						rebuild=true
+					fi
+				fi
+			#else
+			#	! $verbose || echo "Dependency $dep doesn't have a rule"
+			fi
+		done
+			! $verbose || echo "All dependencies of $target are up to date"
+	else
+		! $verbose || echo "No dependencies"
+	fi
+
+	# if all of the prerequisites were already up-to-date, and the target exists, there is nothing to do!
+	$rebuild || return 0
+
+	#rules=(${!rule*})
+	# stage 2: the build steps based on file type or other user-defined rules
+	! $verbose || echo "Looking for rule for target $target"
+	#echo "Known rules ${rules[*]}"
+	for rule in ${rules[*]}; do
+		$rule "$target"
+		ret=$?
+		#echo "$rule=$ret"
+		if [[ $ret == "0" ]]; then
+			# we found a matching rule
+			! $verbose || echo "rule '$rule' matched"
+			return $ret
+		fi
+	done
+	! $verbose || echo "No matching rule"
+	return -1 # no rule found to rebuild this target
+}
+
+function usage()
+{
+	echo "Bake: a bash-based build system"
+	echo "-f <script>        Specify the recipe file containing build instructions"
+	echo "-v                 Set 'verbose' mode; usually for debugging the build script"
+}
+
+### Start here ###
+scriptfile="recipe" # the default script name
+
+# see what options the user is asking for
+while getopts "f:v" option; do
+	case $option in
+	f)
+		scriptfile=$OPTARG
+		;;
+	v)
+		verbose=true
+		;;
+	*)
+		usage
+		exit 0
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+# read script file
+if [ ! -e $scriptfile ]; then
+	echo "I can't find the script called '$scriptfile' in the directory:" $(pwd)
+	exit -2
+fi
+[ ! $verbose ] || echo "Reading script '$scriptfile'"
+source $scriptfile
+
+# figure out the build target. If a parameter was passed on the command line, use that. Otherwise, look for one called 'main'
+target=${1:-"main"}
+! $verbose || echo "Building target '$target'"
+
+# find rules
+rules=$(_find_rules)
+
+# for each target in the list, build it recursively
+build $target dep_names[$target]
+#echo "Done"
