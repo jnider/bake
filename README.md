@@ -20,7 +20,7 @@ example:
 ~/projects$ git clone https://github.com/jnider/bake.git
 ~/projects$ mkdir ~/bin
 ~/projects$ export PATH=$PATH:~/bin
-~/projects$ ln -s bake/bake ~/bin/bake
+~/projects$ ln -s $(realpath bake/bake) ~/bin/bake
 ```
 
 ## How to Write A Recipe
