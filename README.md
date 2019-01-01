@@ -90,7 +90,12 @@ The most trivial example is the '.' character. This is a very common character
 to use in filenames, but it cannot be used in a Bash variable name. Instead,
 Bash (and therefore recipe writers as well) must replace these characters with
 and underscore '_'. Thus for a target `main.o`, its dependencies will be
-found in the array variable `main_o`.
+found in the array variable `main_o`. There are 3 such characters:
+* _._ (period)
+* _/_ (forward slash)
+* _-_ (hyphen)
+
+[See function filter_name() for more details][1]
 
 Just like writing lists of input files, dependencies are Bash arrays:
 ```
@@ -155,3 +160,6 @@ listed below.
 ### Use the -v option
 If 'bake' is invoked with the -v flag, it will print out all of the decisions
 it is taking so that you can trace through the execution.
+
+
+[1]: (../blob/master/bake#L24)
