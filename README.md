@@ -162,4 +162,4 @@ If 'bake' is invoked with the -v flag, it will print out all of the decisions
 it is taking so that you can trace through the execution.
 
 
-[1]: (../blob/master/bake#L24)
+[1]: bake#L24
