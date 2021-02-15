@@ -24,6 +24,23 @@ declare -A dep_names
 unset __verbose
 __version="1.0"
 
+function _language()
+{
+	local language=$1 # the name of the language
+	realpath=$(readlink -f $0) # in case 'bake' was executed from a symbolic link
+	local path=${realpath%/*} # full path of 'bake' script (minus the script name)
+
+	case $language in
+	c)
+		source $path/c_rules
+		;;
+	*)
+		_usage languages
+		exit 0
+		;;
+	esac
+}
+
 function _filter_name()
 {
 	local name=$1 # the name to be filtered
@@ -222,6 +239,8 @@ function _build_target()
 
 function _usage()
 {
+	local param=$1
+
 	echo "Bake: a bash-based build system"
 	echo "Version: $__version"
 	echo "bake [OPTIONS] [TARGET]"
@@ -235,6 +254,13 @@ function _usage()
 	echo "Special targets:"
 	echo "rules              Print out all user-defined rules"
 	echo "filter_name <string> Print the valid variable name that bake can use"
+
+	# tell the user which languages have built-in rules and how to include them
+	if [[ $param == "languages" ]]; then
+		echo ""
+		echo "Supported languages:"
+		echo "C"
+	fi
 }
 
 ### Start here ###
@@ -273,6 +299,9 @@ if [[ $target == "filter_name" ]]; then
 	_filter_name $2 filtered_name
 	[ $__verbose ] && echo "The dependencies will be in a variable called:"
 	echo $filtered_name
+	exit
+elif [[ $target == "languages" ]]; then
+	_usage languages
 	exit
 elif [ $target == "help" ]; then
 	_usage

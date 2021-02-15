@@ -1,0 +1,65 @@
+#!/bin/bash
+#
+# 2020-02-15 J.Nider
+
+#---------------------------
+# compile .c file to .o file
+#
+# Depends on: CC compiler name
+# Optional: CFLAGS additional flags to pass to compiler
+#				SRC_PATH full path to source file
+#				DST_PATH full path to destination file
+#
+function rule_compile_c()
+{
+   local target=$1
+   local root=${target%.o}
+   local suffix=${target##$root}
+   [[ "$suffix" == ".o" ]] && [[ -f "$root.c" ]] || return -1
+
+	# make sure the compiler is set
+	[ $CC ] || {
+		echo "${FUNCNAME[0]}: 'CC' variable must be set to the name of the compiler"
+		exit
+	}
+
+   echo "Compiling $root.c to $root.o"
+
+	local srcfile
+	[ $SRC_PATH ] && srcfile=$SRC_PATH/
+	srcfile+=$root.c
+
+	local dstfile
+	[ $DST_PATH ] && dstfile=$DSTPATH/
+	dstfile+=$root.o
+
+	local cmd="$CC $CFLAGS -c $srcfile -o $dstfile" 
+   [ $__verbose ] && echo $cmd
+   $cmd
+}
+
+#---------------------------
+# link .o files to .elf file
+#
+# Depends on: LD linker name
+#
+function rule_link()
+{
+   local target=$1
+   local root=${target%.*}
+   local suffix=${target##$root}
+   [[ "$suffix" == ".elf" ]] || return -1
+
+	# make sure the linker is set
+	[ $LD ] || {
+		echo "${FUNCNAME[0]}: 'LD' variable must be set to the name of the linker"
+		exit
+	}
+
+   echo "Linking $target"
+	local deps
+	_deps_of $target deps
+	local cmd="$LD $LDFLAGS ${deps[@]} $LDLIBS -o $target" 
+   [ $__verbose ] && echo $cmd
+   $cmd
+}
