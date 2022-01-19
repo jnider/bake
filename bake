@@ -34,7 +34,14 @@ function _language()
 	c)
 		source $path/c_rules
 		;;
+	cpp)
+		source $path/cpp_rules
+		;;
+	cuda)
+		source $path/cuda_rules
+		;;
 	*)
+		echo "Error: language '$language' is not supported!"
 		_usage languages
 		exit 0
 		;;
@@ -131,6 +138,7 @@ function _build_target()
 			[ $__verbose ] && echo "Entering directory '$target'"
 			pushd .
 			parent_dir=$PWD
+			[ $__verbose ] && echo "Changing directory to $outdir/$target"
 			cd $outdir/$target
 			cmd="bake ${__verbose:+"-v"} -p $parent_dir " # $target "
 			[ $__verbose ] && echo $cmd
@@ -278,7 +286,7 @@ while getopts "f:ho:p:v" option; do
 		outdir=$OPTARG
 		;;
 	p)
-		srcdir=$OPTARG
+		parentdir=$OPTARG
 		;;
 	v)
 		__verbose=1
