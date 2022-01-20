@@ -101,6 +101,10 @@ found in the array variable `main_o`. There are 3 such characters:
 * _/_ (forward slash)
 * _-_ (hyphen)
 
+In addition, Bash variable names cannot have a leading digit, but directory
+names can. In that case, the directory name will be prepended with an
+underscore '_'.
+
 [See function filter_name() for more details][1]
 
 Just like writing lists of input files, dependencies are Bash arrays:

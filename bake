@@ -53,6 +53,10 @@ function _filter_name()
 	local name=$1 # the name to be filtered
 	local -n _result=$2 # the return variable to be filled with the filtered name
 
+	# bash variable names cannot have a leading digit but directories can
+	# prepend a _
+	[[ $name =~ ^[[:digit:]] ]] && name="_"$name
+
 	# replace . with _
 	name=${name//\./_}
 	# replace / with _
