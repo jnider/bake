@@ -26,7 +26,7 @@ __version="1.0"
 
 function _language()
 {
-	local language=$1 # the name of the language
+	local language=${1,,} # the name of the language, converted to lowercase
 	realpath=$(readlink -f $0) # in case 'bake' was executed from a symbolic link
 	local path=${realpath%/*} # full path of 'bake' script (minus the script name)
 
