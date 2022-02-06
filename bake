@@ -271,7 +271,9 @@ function _usage()
 	if [[ $param == "languages" ]]; then
 		echo ""
 		echo "Supported languages:"
-		echo "C"
+		echo "C		[_language c]"
+		echo "C++		[_language cpp]"
+		echo "CUDA		[_language cuda]"
 	fi
 }
 
