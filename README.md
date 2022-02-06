@@ -37,17 +37,41 @@ example:
 ~/projects$ ln -s $(realpath bake/bake) ~/bin/bake
 ```
 
-## How to Write A Recipe
-The input to 'bake' is called a recipe. You write a recipe file to give the
+## How to Use
+The input to 'bake' is called a recipe. Recipes give the precise
 instructions on how to build your particular program. This is the equivalent of
 a Makefile or CMakeLists.txt file in other build systems.
-Recipe files are regular bash shell scripts, but you can structure them in a
-particular way to get your project up and running very quickly.
+Recipe files are regular bash shell scripts, but you can rely on existing
+infrastructure to get your project up and running very quickly.
 Bake will automatically look for a file called 'recipe' in the current directory.
 If you want to use a different name, you can pass the -f flag like this:
 ```
 bake -f other-file
 ```
+
+### Environment
+You will often want to change the behaviour of the build without resorting to
+invasive changes in the code or recipe. Just like other build tools, 'bake' can
+read environment variables that can be passed on the command line. For example,
+many projects have a 'debug' and 'release' mode. The mode can be controlled by
+defining the environment variable DEBUG to change the compilation flags, such
+as reducing the compiler optimization level or including conditionally compiled
+print statements that give more insight into what your program is doing at
+runtime. Since 'bake' is just a 'bash' script, you can pass environment
+variables in 2 familiar ways: export them for all subshells to see, or prepend
+them to the command line for just this particular run.
+
+```
+export ARCH=arm32
+bake
+```
+
+or
+
+```
+ARCH=arm32 bake
+```
+
 
 ### Targets
 Targets are how you tell 'bake' what to build. It could be the name of an output
@@ -63,6 +87,33 @@ you want to be able to run 'bake' from the command line without any other
 parameters, add a rule to your recipe that sets your output file as a
 dependency of 'main'. You can see the section below on Dependencies for more
 details on how to do this.
+
+## How to Write A Recipe
+If you are starting your own project, you will need to write your own recipe.
+Although not necessary, I like to get the benefits of syntax highlighting out
+of my editor (vim) for free, so I start off my recipes with:
+```
+#!/bin/bash
+```
+
+### Languages
+There is some support for performing common tasks on common languages. The
+support consists of pre-formed rules for known file types and compilation
+patterns. These rules are flexible and accept parameters for things like
+compilation flags, source directory, target directory, compiler name, etc.
+
+To see
+all of the supported languages in your version:
+
+```
+bake languages
+```
+
+You can use the language support in your recipe by including those rules in
+your recipe like this example for C++:
+```
+_language cpp
+```
 
 ### Input Files
 Often there will be a list of input files that you wish to perform actions on
@@ -134,11 +185,11 @@ tells 'bake' if the target matches or not. Generally, it looks something like th
 function rule_clean_roottask()
 {
 	local target=$1
-	[ "$target" == "roottask_clean" ] || return -1
+	[[ "$target" == "roottask_clean" ]] || return -1
 
 	echo "Cleaning output directory $dest_path"
 	cmd="rm -rf $dest_path"
-	echo $cmd
+	[[ $__verbose ]] && echo $cmd
 	$cmd
 }
 ```
@@ -169,7 +220,9 @@ listed below.
    
 ### Use the -v option
 If 'bake' is invoked with the -v flag, it will print out all of the decisions
-it is taking so that you can trace through the execution.
+it is taking so that you can trace through the execution. It will also set the
+variable `$__verbose` that you can use in your own rules to get a higher level
+of detail.
 
 ## Examples
 Probably the best thing about Make is the documentation. Probably the best thing
@@ -178,6 +231,11 @@ and so will endeavour to reproduce that success by providing useful examples and
 code snippets to make learning 'bake' easy.
 
 ### Rule for compiling 'c' files with 'gcc'
+In general, you should use the built-in language support to compile 'c' files
+(see `language support` above). This is meant as a simple example to explain
+a language most people are likely to be familiar with. Even if you don't know
+C, you will probably understand the compilation process.
+
 The name of the function doesn't really matter, as long as it starts with the
 word 'rule'.
 The first line declares a local variable named 'target', which gets the target
