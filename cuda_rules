@@ -22,14 +22,14 @@ function rule_cuda
    local suffix=${target##$root}
 
 	local srcfile
-	[ $SRC_PATH ] && srcfile=$SRC_PATH/
+	[[ -n $SRC_PATH ]] && srcfile=$SRC_PATH/
 	srcfile+=$root.cu
 
 	local dstfile
-	[ $DST_PATH ] && dstfile=$DST_PATH/
+	[[ -n $DST_PATH ]] && dstfile=$DST_PATH/
 	dstfile+=$root.o
 
-   [[ "$suffix" == ".o" ]] && [[ -f "${SRC_PATH}/$root.cu" ]] || return -1
+   [[ "$suffix" == ".o" ]] && [[ -f "$srcfile" ]] || return -1
 
 	# make sure the compiler is set
 	[ $NVCC ] || {
@@ -40,7 +40,7 @@ function rule_cuda
    echo "Compiling $root.cu to $root.o"
 
 	local cmd="$NVCC $NVCCFLAGS $srcfile -o $dstfile" 
-   [ $__verbose ] && echo $cmd
+   [[ $__verbose ]] && echo $cmd
    $cmd
 }
 
