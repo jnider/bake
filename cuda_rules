@@ -39,7 +39,7 @@ function rule_cuda
 
    echo "Compiling $root.cu to $root.o"
 
-	local cmd="$NVCC $NVCCFLAGS $srcfile -o $dstfile" 
+	local cmd="$NVCC $NVCCFLAGS -c $srcfile -o $dstfile"
    [[ $__verbose ]] && echo $cmd
    $cmd
 }
