@@ -75,10 +75,13 @@ function _deps_of()
 {
 	local target=$1
 	local -n _result=$2 # the return variable to be filled with the dependencies
-	local dep_var_name
-	_filter_name $target dep_var_name
+
+	# use the redirection variable if it exists, otherwise use the target name directly
+	dep_var_name=${dep_names[$target]:-$target}
+	_filter_name $dep_var_name dep_var_name
+	#[ $__verbose ] && echo "Getting dependencies of target $target from variable "\$"$dep_var_name"
 	local -n dep_list=$dep_var_name
-	_result=${dep_list[@]}
+	_result=(${dep_list[@]})
 }
 
 # extract the filename portion of a file (by removing the path)
@@ -189,10 +192,10 @@ function _build_target()
 	# For that reason, the name is filtered beforehand.
 	dep_var_name=${dep_names[$target]:-$target}
 	_filter_name $dep_var_name dep_var_name
-	[ $__verbose ] && echo "Checking dependencies of target $target with dependencies in variable "\$"$dep_var_name"
+	[ $__verbose ] && echo "   Dependencies are in "\$"$dep_var_name"
 	local -n dep_list=$dep_var_name
 	if [[ $dep_list ]]; then
-		[ $__verbose ] && echo "Dependencies of $target: ${dep_list[*]}"
+		[ $__verbose ] && echo "   Dependencies of $target: ${dep_list[*]}"
 
 		## this can be parallelized ##
 		local dep
@@ -221,9 +224,9 @@ function _build_target()
 				fi
 			fi
 		done
-			[ $__verbose ] && echo "} All dependencies of $target are up to date"
+			[ $__verbose ] && echo "   All dependencies of $target are up to date"
 	else
-		[ $__verbose ] && echo "} No dependencies"
+		[ $__verbose ] && echo "   No dependencies"
 	fi
 
 	# if all of the prerequisites were already up-to-date, and the target exists, there is nothing to do!

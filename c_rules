@@ -19,12 +19,15 @@ function rule_compile_c()
 	local target=$1
 	local flags=${2:-$CFLAGS}
 	local root=${target%.o}
-	local suffix=${target##$root}
-	local srcfile
-	[[ $SRC_PATH ]] && srcfile=$SRC_PATH/
-	srcfile+=$root.c
+	local deps
 
-	[[ "$suffix" == ".o" ]] && [[ -f "$srcfile" ]] || return -1
+	# the first dependency is the source file, otherwise guess at the name
+	_deps_of $target deps
+	local srcfile=${deps[0]:-$root.c}
+	local suffix=${srcfile##*.}
+
+	# make sure source file exists and is of the right type
+	[[ "$suffix" == "c" ]] && [[ -f "$srcfile" ]] || return -1
 
 	# make sure the compiler is set
 	[[ $CC ]] || {
@@ -32,11 +35,7 @@ function rule_compile_c()
 		exit
 	}
 
-	echo "Compiling $root.c to $root.o"
-
-	local dstfile
-	[[ $DST_PATH ]] && dstfile=$DSTPATH/
-	dstfile+=$root.o
+	echo "Compiling $srcfile to $target"
 
 	local cmd="$CC $flags -c $srcfile -o $target"
 	[[ $__verbose ]] && echo $cmd

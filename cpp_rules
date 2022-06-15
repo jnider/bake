@@ -16,21 +16,18 @@ source $path/ld_rules
 #
 function rule_compile_cpp()
 {
-   local target=$1
+	local target=$1
 	local flags=${2:-$CXXFLAGS}
-   local root=${target%.o}
-   local suffix=${target##$root}
-	local source=$root.cpp
+	local root=${target%.o}
+	local deps
 
-	local srcfile
-	[ $SRC_PATH ] && srcfile=$SRC_PATH/
-	srcfile+=$source
+	# the first dependency is the source file, otherwise guess at the name
+	_deps_of $target deps
+	local srcfile=${deps[0]:-$root.cpp}
+	local suffix=${srcfile##*.}
 
-	local dstfile
-	[ $DST_PATH ] && dstfile=$DST_PATH/
-	dstfile+=$target
-
-   [[ "$suffix" == ".o" ]] && [[ -f "$srcfile" ]] || return -1
+	# make sure source file exists and is of the right type
+	[[ "$suffix" == "o" ]] && [[ -f "$srcfile" ]] || return -1
 
 	# make sure the compiler is set
 	[ $CXX ] || {
@@ -38,9 +35,9 @@ function rule_compile_cpp()
 		exit
 	}
 
-   echo "Compiling $source to $target"
+	echo "Compiling $source to $target"
 
-	local cmd="$CXX $flags -c $srcfile -o $dstfile" 
-   [ $__verbose ] && echo $cmd
-   $cmd
+	local cmd="$CXX $flags -c $srcfile -o $target"
+	[[ $__verbose ]] && echo $cmd
+	$cmd
 }

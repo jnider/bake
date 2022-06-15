@@ -17,20 +17,16 @@ source $path/ld_rules
 
 function rule_cuda
 {
-   local target=$1
+	local target=$1
 	local flags=${2:-$NVCCFLAGS}
-   local root=${target%.o}
-   local suffix=${target##$root}
+	local root=${target%.o}
 
-	local srcfile
-	[[ -n $SRC_PATH ]] && srcfile=$SRC_PATH/
-	srcfile+=$root.cu
+	# the first dependency is the source file, otherwise guess at the name
+	_deps_of $target deps
+	local srcfile=${deps[0]:-$root.cu}
+	local suffix=${srcfile##*.}
 
-	local dstfile
-	[[ -n $DST_PATH ]] && dstfile=$DST_PATH/
-	dstfile+=$root.o
-
-   [[ "$suffix" == ".o" ]] && [[ -f "$srcfile" ]] || return -1
+	[[ "$suffix" == "o" ]] && [[ -f "$srcfile" ]] || return -1
 
 	# make sure the compiler is set
 	[ $NVCC ] || {
@@ -38,10 +34,10 @@ function rule_cuda
 		exit
 	}
 
-   echo "Compiling $root.cu to $root.o"
+	echo "Compiling $source to $target"
 
-	local cmd="$NVCC $flags -c $srcfile -o $dstfile"
-   [[ $__verbose ]] && echo $cmd
-   $cmd
+	local cmd="$NVCC $flags -c $srcfile -o $target"
+	[[ $__verbose ]] && echo $cmd
+	$cmd
 }
 
