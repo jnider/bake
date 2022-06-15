@@ -27,7 +27,7 @@ declare -A objects
 unset __verbose
 unset __changedir
 
-__version="1.0"
+__version="1.1"
 
 function _language()
 {
