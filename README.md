@@ -88,6 +88,13 @@ parameters, add a rule to your recipe that sets your output file as a
 dependency of 'main'. You can see the section below on Dependencies for more
 details on how to do this.
 
+'bake' looks for a target called 'main' automatically if
+no parameters are provided on the command line. You can add a target called
+'main' with a single dependency so 'bake' will do what you expect like this:
+```
+main=video.elf
+```
+
 ## How to Write A Recipe
 If you are starting your own project, you will need to write your own recipe.
 Although not necessary, I like to get the benefits of syntax highlighting out
@@ -95,6 +102,11 @@ of my editor (vim) for free, so I start off my recipes with:
 ```
 #!/bin/bash
 ```
+Recipes generally consist of one or more targets, their dependencies and the
+rules needed to generate each target. Common targets (such as generating .o
+files from .c files) have some language-specific support, described in the
+Languages section. You can also make your own custom rules if you need to
+do something different. That is described in the Rules section.
 
 ### Languages
 There is some support for performing common tasks on common languages. The
@@ -162,12 +174,24 @@ Just like writing lists of input files, dependencies are Bash arrays:
 ```
 main_o=(main.c header.h)
 ```
-As mentioned earlier, 'bake' looks for a target called 'main' automatically if
-no parameters are provided on the command line. You can add a target called
-'main' with a single dependency so 'bake' will do what you expect like this:
+As the project grows, building it can become more complicated. You might want
+to support multiple source directories, or a variable build directory name.
+That makes static dependency lists difficult to maintain or even produce. To
+make things easier, you can use the dependency redirection array. A global
+associative array called 'dep_names' holds variable names containing the actual
+dependencies. The target name can be practically any string and can use variables.
+For example, if you want to support a user-defined build directory, you can
+use a variable. Let's call it $BUILDDIR for this example. You then specify all
+targets relative to that build directory, e.g. $BUILDDIR/main.o. You can then
+tell 'bake' where to find the dependencies of this target like this:
 ```
-main=video.elf
+dep_names[$BUILDDIR/main.o]=deps_main_o
+deps_main_o=(main.c main.h)
 ```
+Notice that the array subscript does not need to be filtered or altered in any
+way. No matter the value of $BUILDDIR, 'bake' will know how to find the
+dependency array 'deps_main_o'. All of the dependencies are relative to the
+source directory, which is the directory where 'bash' started (by default).
 
 ### Rules
 Rules run when 'bake' determines something is out of date. Generally, something
@@ -240,25 +264,26 @@ The name of the function doesn't really matter, as long as it starts with the
 word 'rule'.
 The first line declares a local variable named 'target', which gets the target
 name that bake is trying to build. The next step is to determine the file type
-by inspecting the name. I use the ## operator to remove everything in the name
-up to the last dot. Whatever is left after the dot is compared to "o" to see
-if we are trying to build an .o file. If so, we assume that the source file is
-a C file with the same stem, but a .c extension. Then it is trivial to use
+by inspecting the name. I use the standard bash ## operator to remove everything
+in the name up to the last dot. Whatever is left after the dot is compared to "o"
+to see if we are trying to build an .o file. If so, we assume that the source file
+is a C file with the same stem, but a .c extension. Then it is trivial to use
 these two variable names in a command that executes 'gcc'. In this example, the
-result of the compilation is not checked directly (the return code is not used)
-but 'bake' will make sure the .o file is produced as a result of the compilation
-before continuing to the next step. If the target file is not built for some
-reason (error in the source code, compiler crashes, etc), 'bake' will quit with
-an error message about a failed dependency for the parent target.
+result of the compilation is not checked directly but 'bake' will see the return
+code when the rule exits and will not continue to the next step if it has failed.
+If the target file is not built for some reason (error in the source code, compiler
+crashes, etc), 'bake' will quit with an error message about a failed dependency for
+the parent target.
 ```
 function rule_c
 {
 	local target=$1
+	local flags=#{2:-$CFLAGS}
 	[ ${target##*.} == "o" ] || return -1
 	local src=${target%%.o}.c
 
 	echo "building $target from $src"
-	gcc $CFLAGS -c $src -o $target
+	gcc $flags -c $src -o $target
 }
 ```
 [1]: bake#L24
