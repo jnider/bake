@@ -286,4 +286,4 @@ function rule_c
 	gcc $flags -c $src -o $target
 }
 ```
-[1]: bake#L24
+[1]: bake#L59
