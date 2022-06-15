@@ -13,10 +13,10 @@
 # itself, which begs the question 'why use two languages instead of one?'
 # Thus, 'bake' is the result of bash+make => a bash-based build system
 
-# allow 20 levels of function recursion by default
+# allow multiple levels of function recursion by default
 # We want enough levels to catch circular dependencies without artificially limiting valid usage
 # This can be overridden on the command line, if necessary
-FUNCNEST=${NESTING:-20}
+FUNCNEST=${NESTING:-10}
 #set -x
 
 declare -a rules
