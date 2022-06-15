@@ -12,13 +12,12 @@ source $path/ld_rules
 # compile .c file to .o file
 #
 # Depends on: CC compiler name
-# Optional: CFLAGS additional flags to pass to compiler
-#				SRC_PATH full path to source file
-#				DST_PATH full path to destination file
+# Optional: 'flags' additional flags to pass to compiler, or CFLAGS global
 #
 function rule_compile_c()
 {
 	local target=$1
+	local flags=${2:-$CFLAGS}
 	local root=${target%.o}
 	local suffix=${target##$root}
 	local srcfile
@@ -39,7 +38,7 @@ function rule_compile_c()
 	[[ $DST_PATH ]] && dstfile=$DSTPATH/
 	dstfile+=$root.o
 
-	local cmd="$CC $CFLAGS -c $srcfile -o $dstfile" 
+	local cmd="$CC $flags -c $srcfile -o $target"
 	[[ $__verbose ]] && echo $cmd
 	$cmd
 }

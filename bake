@@ -21,6 +21,8 @@ FUNCNEST=${NESTING:-10}
 
 declare -a rules
 declare -A dep_names
+declare -A flags
+
 unset __verbose
 unset __changedir
 
@@ -107,6 +109,15 @@ function _print_rules()
 	echo "All known rules:"
 	for rule in $rules; do
 		echo $rule
+	done
+}
+
+function _print_flags()
+{
+	echo "Known flags:"
+	for f in ${!flags[@]}; do
+		echo "[$f]="
+		echo "  ${flags[$f]}"
 	done
 }
 
@@ -232,21 +243,19 @@ function _build_target()
 		mkdir -p $target_dir
 	fi
 
-	#rules=(${!rule*})
 	# stage 2: the build steps based on file type or other user-defined rules
-	[ $__verbose ] && echo "} Looking for rule for target $target"
-	#echo "Known rules ${rules[*]}"
+	[ $__verbose ] && echo "Looking for rule for target $target"
 	for rule in ${rules[*]}; do
-		$rule "$target"
+		$rule "$target" "${flags[$target]}"
 		ret=$?
 		#echo "$rule=$ret"
 		if [[ $ret == "0" ]]; then
 			# we found a matching rule
-			[ $__verbose ] && echo "} rule '$rule' matched"
+			[ $__verbose ] && echo "   rule '$rule' matched"
 			return $ret
 		fi
 	done
-	[ $__verbose ] && echo "No matching rule"
+	[ $__verbose ] && echo "   No matching rule for target $target"
 
 	# check if this exists as an input directory
 	if [[ -d $target ]]; then
@@ -362,6 +371,12 @@ rules=$(_find_rules)
 # print the rules - this obviously must be done after the script is sourced
 if [[ $target == "rules" ]]; then
 	_print_rules
+	exit
+fi
+
+# print the known flags
+if [[ $target == "flags" ]]; then
+	_print_flags
 	exit
 fi
 
