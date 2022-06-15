@@ -22,6 +22,8 @@ FUNCNEST=${NESTING:-10}
 declare -a rules
 declare -A dep_names
 unset __verbose
+unset __changedir
+
 __version="1.0"
 
 function _language()
@@ -133,28 +135,37 @@ function _build_target()
 	fi
 
 	# set the 'modified' timestamp
+	# need to check if this is an absolute path by looking at the first character
 	[ $__verbose ] && echo "Checking for the existence of a target file named '$outdir/$target'"
 	if [[ -e $outdir/$target ]]; then
 		target_exists=true
 		rebuild=false
 		if [[ -d $outdir/$target ]]; then
 			# directory - recurse into it and build whatever is there
-			[ $__verbose ] && echo "Entering directory '$target'"
+			[ $__verbose ] && echo "   Entering directory '$target'"
 			pushd .
 			parent_dir=$PWD
-			[ $__verbose ] && echo "Changing directory to $outdir/$target"
+			[ $__verbose ] && echo "   Changing directory to $outdir/$target"
 			cd $outdir/$target
-			cmd="bake ${__verbose:+"-v"} -p $parent_dir " # $target "
+			cmd="bake ${__verbose:+"-v"} -o $parent_dir $parent"
 			[ $__verbose ] && echo $cmd
 			$cmd
 			popd
 		elif [[ -f $outdir/$target ]]; then
 			# regular file
-			[ $__verbose ] && echo "Target $outdir/$target exists"
+			[ $__verbose ] && echo "   Target (rel) $outdir/$target exists"
 			modified=$(stat -c %Y "$outdir/$target")
 		fi
+	elif [[ -e $target ]]; then
+		target_exists=true
+		rebuild=false
+		if [[ -f $target ]]; then
+			# regular file
+			[ $__verbose ] && echo "   Target (abs) $target exists"
+			modified=$(stat -c %Y "$target")
+		fi
 	else
-		[ $__verbose ] && echo "target file '$outdir/$target' doesn't exist"
+		[ $__verbose ] && echo "   target file '$outdir/$target' doesn't exist"
 		modified=0
 		rebuild=true
 	fi
@@ -181,7 +192,7 @@ function _build_target()
 				_build_target $dep dep_names[$filtered_dep] $outdir $modified $target
 				ret=$?
 				if [[ $ret == 255 ]]; then
-					echo "Dependency $dep failed"
+					echo "[$(pwd)] Dependency $dep failed"
 					return $ret
 				elif [[ $ret == 2 ]]; then
 					[ $__verbose ] && echo "Prerequisite $dep says we must rebuild $target"
@@ -257,10 +268,10 @@ function _usage()
 	echo "Version: $__version"
 	echo "bake [OPTIONS] [TARGET]"
 	echo "Options:"
+	echo "-C <dir>           Change to specified directory before executing bake"
 	echo "-f <script>        Specify the recipe file containing build instructions"
 	echo "-h                 This help screen"
 	echo "-o <path>          Specify the output directory for any targets"
-	echo "-p <path>          Specify the script path for a heirarchical build system"
 	echo "-v                 Set 'verbose' mode; usually for debugging the build script"
 	echo ""
 	echo "Special targets:"
@@ -283,16 +294,19 @@ srcdir=$(pwd) # default path
 outdir=$(pwd) # default output directory
 
 # see what options the user is asking for
-while getopts "f:ho:p:v" option; do
+while getopts "C:f:ho:p:s:v" option; do
 	case $option in
+	C)
+		__changedir=$OPTARG
+		;;
 	f)
 		scriptfile=$OPTARG
 		;;
 	o)
 		outdir=$OPTARG
 		;;
-	p)
-		parentdir=$OPTARG
+	s)
+		srcdir=$OPTARG
 		;;
 	v)
 		__verbose=1
@@ -304,6 +318,17 @@ while getopts "f:ho:p:v" option; do
 	esac
 done
 shift $((OPTIND-1))
+
+# change to the specified directory
+# srcdir and outdir are relative to the current working directory
+if [[ $__changedir ]]; then
+	[[ $__verbose ]] && echo "Changing to $__changedir"
+	pushd .
+	cd $__changedir
+fi
+
+[[ $__verbose ]] && echo "srcdir: $srcdir"
+[[ $__verbose ]] && echo "outdir: $outdir"
 
 # figure out the build target. If a parameter was passed on the command line, use that. Otherwise, look for one called 'main'
 target=${1:-"main"}
@@ -328,8 +353,8 @@ if [[ ! -f $srcdir/$scriptfile ]]; then
 	exit -2
 fi
 
-[ $__verbose ] && echo "Reading script '$srcdir/$scriptfile'"
-source $srcdir/$scriptfile
+[ $__verbose ] && echo "Reading script '$(pwd)/$scriptfile'"
+source $scriptfile
 
 # find rules
 rules=$(_find_rules)
@@ -346,3 +371,7 @@ fi
 # for each target in the list, build it recursively
 _build_target $target dep_names[$target] $outdir
 [ $__verbose ] && echo "Done"
+
+# return thee, from whence thou came
+[[ -v $__changedir ]] && popd
+echo "[$(pwd)]"
