@@ -23,9 +23,9 @@ function rule_link()
 	}
 
    echo "Linking $target"
-	local deps
-	_deps_of $target deps
-	local cmd="$LD $LDFLAGS ${deps[@]} $LDLIBS -o $target" 
+	local -n objs=${objects[$target]}
+
+	local cmd="$LD $flags ${objs[@]} $LDLIBS -o $target"
    [ $__verbose ] && echo $cmd
    $cmd
 }

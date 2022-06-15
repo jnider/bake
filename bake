@@ -22,6 +22,7 @@ FUNCNEST=${NESTING:-10}
 declare -a rules
 declare -A dep_names
 declare -A flags
+declare -A objects
 
 unset __verbose
 unset __changedir
