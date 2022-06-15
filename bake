@@ -36,6 +36,9 @@ function _language()
 	local path=${realpath%/*} # full path of 'bake' script (minus the script name)
 
 	case $language in
+	asm)
+		source $path/asm_rules
+		;;
 	c)
 		source $path/c_rules
 		;;
@@ -295,9 +298,10 @@ function _usage()
 	if [[ $param == "languages" ]]; then
 		echo ""
 		echo "Supported languages:"
-		echo "C		[_language c]"
-		echo "C++		[_language cpp]"
-		echo "CUDA		[_language cuda]"
+		echo "ASM      [_language asm]"
+		echo "C        [_language c]"
+		echo "C++      [_language cpp]"
+		echo "CUDA     [_language cuda]"
 	fi
 }
 

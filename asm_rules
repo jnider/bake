@@ -1,0 +1,46 @@
+#!/bin/bash
+#
+# 2020-02-15 J.Nider
+
+realpath=$(readlink -f $0) # in case 'bake' was executed from a symbolic link
+path=${realpath%/*} # full path of 'bake' script (minus the script name)
+
+# include the linker rules automatically for convenience
+source $path/ld_rules
+
+#---------------------------
+# compile .S file to .o file
+#
+# Depends on: ASM compiler name
+# Optional: ASMFLAGS additional flags to pass to compiler
+#
+function rule_compile_asm()
+{
+	local target=$1
+	local flags=$2
+	local root=${target%.o}
+	local deps
+
+	# the first dependency is the source file, otherwise guess at the name
+	_deps_of $target "deps"
+	local srcfile=${deps[0]#:-$root.S}
+	local suffix=${srcfile##*.}
+
+	# make sure source file exists and is of the right type
+	[[ "$suffix" == "S" ]] && [[ -f "$srcfile" ]] || return -1
+
+	# make sure the compiler is set
+	[[ $ASM ]] || {
+		echo "${FUNCNAME[0]}: 'ASM' variable must be set to the name of the assembler"
+		exit
+	}
+
+	# build Make dependency fragment file
+	[[ $ASMDEPS ]] && $flags+=" -MF $target.d"
+
+	echo "Assembling $srcfile to $target"
+
+	local cmd="$ASM $flags -c $srcfile -o $target"
+	[[ $__verbose ]] && echo $cmd
+	$cmd
+}
