@@ -218,6 +218,29 @@ function rule_clean_roottask()
 }
 ```
 
+### Independent Rules
+Sometimes you want a rule to run every time, without any dependencies. One example
+is a 'tag' file, which should be updated every time you run the rule. You don't
+want to explicitly add all other files as dependencies since you might not want to
+update the tag file on every build, but you do want it updated even if the tag
+file already exists. To do so, you add a dependency to your target that will never
+exist, and build a rule to run for that new dependency. This is similar behaviour
+to declaring a target .PHONY in a Makefile. In the example below, 'rebuild_tags'
+is a dependency of 'tags' that will never exist. When 'bake' tries to build it, it
+will run the rule 'rule_rebuild_tags'.
+```
+tags=(rebuild_tags)
+
+function rule_rebuild_tags()
+{
+   local target=$1
+   [[ $target == "rebuild_tags" ]] || return
+
+   echo "Building tag file"
+   ctags -R -f tags .
+}
+```
+
 ## How to Debug
 This is actually two different questions - (1) how to debug your recipe, and
 (2) how to debug Bake itself. Fortunately, both of these things are just Bash
