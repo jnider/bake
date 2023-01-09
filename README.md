@@ -148,6 +148,30 @@ c_src=$(find . -name '*.c')
 ```
 This list can be processed further to generate a list of targets.
 
+### Input Files for Linking
+The linker expects a list of object files to be linked together to create the
+final executable. In a simple project, this list is equivalent to the
+dependency list of the executable, and the built-in linker rule will use it
+automatically.
+```
+# dependencies and linkable objects are the same
+out_elf=(main.o another.o)
+```
+In a more complicated project, the executable can be dependent on libraries,
+linker scripts, and other files. In this case, the dependencies include all
+of the files, but the list of linkable objects is only a subset of that list.
+We can specify two different lists, using the built-in 'objects' array. In
+this way, the command line to the linker can be specified more precisely,
+where options and libraries preceed the link objects.
+```
+# only the object files
+elf_objs=(main.o another.o)
+objects[out.elf]=elf_objs
+
+# dependencies include object files as well as other files
+out_elf=(linker.ld somelib.a ${elf_objs[@]})
+```
+
 ### Dependencies
 If the target is dependent on other files (like in the C language, where .o
 files depend on .c and .h files) you can use an array variable to specify the
