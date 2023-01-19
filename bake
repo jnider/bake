@@ -314,7 +314,14 @@ outdir=$(pwd) # default output directory
 while getopts "C:f:ho:p:s:v" option; do
 	case $option in
 	C)
+		# change to the specified directory
 		__changedir=$OPTARG
+		[[ $__verbose ]] && echo "Changing to $__changedir"
+		pushd .
+		cd $__changedir
+		# srcdir and outdir are relative to the current working directory
+		srcdir=$(pwd) # default path
+		outdir=$(pwd) # default output directory
 		;;
 	f)
 		scriptfile=$OPTARG
@@ -335,14 +342,6 @@ while getopts "C:f:ho:p:s:v" option; do
 	esac
 done
 shift $((OPTIND-1))
-
-# change to the specified directory
-# srcdir and outdir are relative to the current working directory
-if [[ $__changedir ]]; then
-	[[ $__verbose ]] && echo "Changing to $__changedir"
-	pushd .
-	cd $__changedir
-fi
 
 [[ $__verbose ]] && echo "srcdir: $srcdir"
 [[ $__verbose ]] && echo "outdir: $outdir"
