@@ -82,6 +82,7 @@ function _deps_of()
 
 	# use the redirection variable if it exists, otherwise use the target name directly
 	dep_var_name=${dep_names[$target]:-$target}
+
 	_filter_name $dep_var_name dep_var_name
 	#[ $__verbose ] && echo "Getting dependencies of target $target from variable "\$"$dep_var_name"
 	local -n dep_list=$dep_var_name
@@ -195,9 +196,16 @@ function _build_target()
 	# Sometimes, dep_$target isn't a valid identifier (for example, contains '/' in a file path)
 	# For that reason, the name is filtered beforehand.
 	dep_var_name=${dep_names[$target]:-$target}
-	_filter_name $dep_var_name dep_var_name
-	[ $__verbose ] && echo "   Dependencies are in "\$"$dep_var_name"
-	local -n dep_list=$dep_var_name
+	if [[ ${dep_var_name##*.} == "d" && -e $dep_var_name ]]; then
+		[[ $__verbose ]] && echo "Using $dep_var_name as a Make-style dependency file"
+		IFS=": " read -es target deps < $dep_var_name
+		dep_list=($deps)
+	else
+		_filter_name $dep_var_name dep_var_name
+		[ $__verbose ] && echo "   Dependencies are in "\$"$dep_var_name"
+		local -n dep_list=$dep_var_name
+	fi
+
 	if [[ $dep_list ]]; then
 		[ $__verbose ] && echo "   Dependencies of $target: ${dep_list[*]}"
 
