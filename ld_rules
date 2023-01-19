@@ -23,7 +23,18 @@ function rule_link()
 	}
 
    echo "Linking $target"
-	local -n objs=${objects[$target]:-""}
+
+	# first, check the 'objects' array for explicit input files. If that doesn't
+	# exist, fall back to the dependencies list.
+	if [[ -v ${objects[$target]} ]]; then
+		local -n objs=${objects[$target]}
+	else
+		_deps_of $target objs
+		echo "Deps: ${objs[@]}"
+		if [[ -v $objs ]]; then
+			echo "You have not specified any input files to be linked for target $target"
+		fi
+	fi
 
 	local cmd="$LD $flags ${objs[@]} $LDLIBS -o $target"
    [ $__verbose ] && echo $cmd
