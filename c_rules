@@ -18,8 +18,12 @@ function rule_compile_c()
 {
 	local target=$1
 	local flags=${2:-$CFLAGS}
-	local root=${target%.o}
+	local root=${target%.*}
 	local deps
+	local target_suffix=${target##*.}
+
+	# make sure target is of the right type
+	[[ "$target_suffix" =~ [oO] ]] || return -1
 
 	# the first dependency is the source file, otherwise guess at the name
 	_deps_of $target deps
