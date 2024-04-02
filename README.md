@@ -285,7 +285,7 @@ listed below.
    a variable name, you have to use the keyword 'local'.
 2. Array variables
    When you reference an array variable, make sure you use the correct syntax.
-   For example, if you have a list called 'c_src', referencing it as $c_src
+   For example, if you have a list called 'c_src', referencing it as '$c_src'
    is legal, but will only reference the first item in the list. To get all of
    the items, you must write it as: ${c_src[@]}
    
